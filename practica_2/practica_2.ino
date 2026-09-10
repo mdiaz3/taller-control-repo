@@ -5,6 +5,9 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
+#include <Servo.h>
+Servo obj_servo;
+const int pinServo = 9;
 unsigned long tiempo1;
 unsigned long tiempo2;
 const int T = 20000; // periodo en us
@@ -44,8 +47,8 @@ void setup(void) {
   for (int i = 0; i==10; i++){
     mpu.getEvent(&a, &g, &temp);
     wx_acc = wx_acc + g.gyro.x;
-    delay(20)
-  }
+    delay(20);
+  };
   wx_prom = wx_acc / 100.0;
 
   // inicializar servo
@@ -89,15 +92,15 @@ void loop() {
   if(t_delay >= 16383){
     delay(10);
     delayMicroseconds(t_delay-10000);
-  }
+  };
   
   // mover servo cada ~ 200 * 20ms = 4s
   static int counter = 0;
-  obj_servo.writeMicroseconds(angulo_a_us(0))
+  obj_servo.writeMicroseconds(angulo_a_us(0));
   if(counter >= 200){
     obj_servo.writeMicroseconds(angulo_a_us(60));
     counter = 0;
-  }
+  };
   counter++;
 
 }
@@ -119,7 +122,7 @@ void matlab_send_2(float datos[], int n) {
   for (int i = 0; i < n; i++) {
     byte *b = (byte *)&datos[i];
     Serial.write(b, 4);
-  }
+  };
 }
 
 int angulo_a_us(float angulo) {
