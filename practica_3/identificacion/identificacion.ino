@@ -7,16 +7,18 @@
 #include <Wire.h>
 #include <Servo.h>
 
-Servo obj_servo;
+#define SERVO_HORIZONTAL 1400
 const int pinServo = 9;
+
+Servo obj_servo;
+Adafruit_MPU6050 mpu;
+
 unsigned long tiempo1;
 unsigned long tiempo2;
 const int T = 20000; // periodo en us
 int t_delay = 0;
 float dif = 0;
-float wx_prom = 0; // velocidad angular promedio en x
 
-Adafruit_MPU6050 mpu;
 
 void setup(void) {
   Serial.begin(115200);
@@ -45,13 +47,12 @@ void setup(void) {
   // Calibrar giroscopio
   float wx_acc = 0; // velocidad angular acumulada en x
   sensors_event_t a, g, temp;
-  for (int i = 0; i==99; i++){
+  for (int i = 0; i==10; i++){
     mpu.getEvent(&a, &g, &temp);
     wx_acc = wx_acc + g.gyro.x;
     delay(20);
   };
-  wx_prom = wx_acc / 100.0;
-  Serial.print("Velocidad angular promedio en x: "+ wx_prom);
+  //wx_prom = wx_acc / 100.0;
 
   // inicializar servo
   obj_servo.attach(pinServo);
@@ -66,22 +67,16 @@ void loop() {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); 
 
-  // estimacion de los angulos
-  static float alpha_g; // estimacion del angulo basada en el giroscopio
-  static float alpha_a; // estimacion del angulo basada en el acelerometro
-  static float alpha_g_anterior = 0;
-  alpha_g = alpha_g_anterior + g.gyro.x * T*1E-6 - wx_prom; 
-  alpha_g_anterior = alpha_g;
-  alpha_a = atan2(a.acceleration.y, a.acceleration.z);
-
   // filtro complementario
   const float R = 0.93;
-  static float alpha_g_comp = alpha_g; // estimacion del angulo basada en el giroscopio para el filtro complementario
-  static float alpha_a_comp = alpha_a; // estimacion del angulo basada en el acelerometro para el filtro complementario
+  static float alpha_g_inicial = 0;
+  static float alpha_g_comp = alpha_g_inicial + g.gyro.x * 0.02; // estimacion del angulo basada en el giroscopio para el filtro complementario
+  static float alpha_a_comp = atan2(a.acceleration.y, a.acceleration.z); // estimacion del angulo basada en el acelerometro para el filtro complementario
   float alpha_f; // estimacion del filtro complementario
   alpha_f = alpha_g_comp*R + alpha_a_comp*(1-R);
-  alpha_g_comp = alpha_f + g.gyro.x * T*1E-6 - wx_prom; 
+  alpha_g_comp = alpha_f + g.gyro.x * 0.02;// - wx_prom; 
   alpha_a_comp = atan2(a.acceleration.y, a.acceleration.z);
+
 
   // controlar la frecuencia de muestreo
   tiempo2 = micros();
@@ -92,34 +87,45 @@ void loop() {
     delayMicroseconds(t_delay-10000);
   };
   
-  mover_servo(obj_servo);
+  // mover servo cada ~ 200 * 20ms = 4s
+  static int counter = 0;
+  static int counter2 = 0; 
+  static int counter3 = 0;
+  static int counter4 = 0;
 
-  // enviar a matlab para ajustar el R
-  float datos[3] = {alpha_f, alpha_g_comp, alpha_a_comp};
-  matlab_send(datos, 3);
+  static float angulo = 0;
+  if(counter >= 200){
+    obj_servo.writeMicroseconds(1400);
+    counter = 0;
+    angulo = 0;
+  };
+  if(counter2 >= 400){
+     obj_servo.writeMicroseconds(1600);
+     counter2 = 0;
+     angulo = 10;
+  };
+  if(counter3 >= 600){
+    obj_servo.writeMicroseconds(1400);
+    counter3 = 0;
+    angulo = 0;
+  };
+  if(counter4 >= 800){
+     obj_servo.writeMicroseconds(1200);
+     counter4 = 0;
+     angulo = -10;
+  };
+  counter++;
+  counter2++;
+  counter3++;
+  counter4++;
 
-}
-
-void mover_servo(Servo &obj_servo){
-
-  // mueve al servo en una secuencia periodica de angulos
-  const float secuencia_angulos[] = {20.0, 0.0, -20.0, 0.0};
-  const unsigned long periodo_us = 2E6;
-
-  static unsigned long ult_mov_us = 0;
-  static int pos_actual = 0;
-  unsigned long ahora = micros();
+  float datos[3] = {alpha_f, angulo,1};
+  matlab_send_2(datos, 3);
   
-  if(ahora - ult_mov_us >= periodo_us){
-    float us = angulo_a_us(secuencia_angulos[pos_actual])
-    obj_servo.writeMicroseconds(us);
-    pos_actual = (pos_actual+1) % 4;
-    ult_mov_us = ahora;
-  }
-
 }
 
-void matlab_send(float datos[], int n) {
+
+void matlab_send_2(float datos[], int n) {
   Serial.write("abcd");
 
   for (int i = 0; i < n; i++) {
@@ -128,7 +134,8 @@ void matlab_send(float datos[], int n) {
   };
 }
 
-int angulo_a_us(float angulo) {
-  return 1400 + (angulo * 600.0 / 60.0);
+
+void inicio_servo(){
+  obj_servo.writeMicroseconds(1400);
 }
 
