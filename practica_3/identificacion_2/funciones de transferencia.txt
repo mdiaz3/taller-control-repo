@@ -1,0 +1,19 @@
+P_d =
+ 
+         0.02826
+  ---------------------
+  z^2 - 1.79 z + 0.8223
+ 
+Sample time: 0.02 seconds
+Discrete-time transfer function.
+
+
+
+
+P_c =
+ 
+   -0.8081 s + 78.02
+  --------------------
+  s^2 + 9.78 s + 90.37
+ 
+Continuous-time transfer function.

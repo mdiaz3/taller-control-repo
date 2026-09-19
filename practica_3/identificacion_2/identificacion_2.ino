@@ -8,6 +8,7 @@
 #include <Servo.h>
 
 Servo obj_servo;
+
 const int pinServo = 9;
 unsigned long tiempo1;
 unsigned long tiempo2;
@@ -17,6 +18,7 @@ float dif = 0;
 float wx_prom = 0; // velocidad angular promedio en x
 
 Adafruit_MPU6050 mpu;
+
 
 void setup(void) {
   Serial.begin(115200);
@@ -54,6 +56,7 @@ void setup(void) {
   Serial.print("Velocidad angular promedio en x: ");
   Serial.print(wx_prom);
   Serial.print("\n");
+
   // inicializar servo
   obj_servo.attach(pinServo);
 
@@ -63,26 +66,17 @@ void loop() {
   
   tiempo1 = micros();
 
+  float u = senial_control(obj_servo);
+
   // obtener mediciones
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); 
+  
+  float alpha_f = estimar_angulo(a, g);
 
-  // estimacion de los angulos
-  static float alpha_g; // estimacion del angulo basada en el giroscopio
-  static float alpha_a; // estimacion del angulo basada en el acelerometro
-  static float alpha_g_anterior = 0;
-  alpha_g = alpha_g_anterior + (g.gyro.x - wx_prom)* T*1E-6; 
-  alpha_g_anterior = alpha_g;
-  alpha_a = atan2(a.acceleration.y, a.acceleration.z);
-
-  // filtro complementario
-  const float R = 0.93;
-  static float alpha_g_comp = alpha_g; // estimacion del angulo basada en el giroscopio para el filtro complementario
-  static float alpha_a_comp = alpha_a; // estimacion del angulo basada en el acelerometro para el filtro complementario
-  float alpha_f; // estimacion del filtro complementario
-  alpha_f = alpha_g_comp*R + alpha_a_comp*(1-R);
-  alpha_g_comp = alpha_f + (g.gyro.x - wx_prom) * T*1E-6; 
-  alpha_a_comp = atan2(a.acceleration.y, a.acceleration.z);
+  // enviar a matlab > {senial de control, angulo edstimado}
+  float datos[2] = {u, alpha_f*180.0/3.1415};
+  matlab_send(datos, 2);
 
   // controlar la frecuencia de muestreo
   tiempo2 = micros();
@@ -91,32 +85,46 @@ void loop() {
   if(t_delay >= 16383){
     delay(10);
     delayMicroseconds(t_delay-10000);
-  };
-  
-  mover_servo(obj_servo);
-
-  // enviar a matlab para ajustar el R
-  float datos[3] = {alpha_f*180/3.1415, alpha_g_comp*180/3.1415, alpha_a_comp*180/3.1415};
-  matlab_send(datos, 3);
+  }
+  else{
+    delayMicroseconds(t_delay);
+  }
 
 }
 
-void mover_servo(Servo &obj_servo){
+float estimar_angulo(sensors_event_t a, sensors_event_t g){
+  // filtro complementario
+  const float R = 0.93;
+  static float alpha_g_inicial = 0;
+  static float alpha_g_comp = alpha_g_inicial + (g.gyro.x - wx_prom) * T*1E-6; // estimacion del angulo basada en el giroscopio para el filtro complementario
+  
+  float alpha_a_comp = atan2(a.acceleration.y, a.acceleration.z); // estimacion del angulo basada en el acelerometro para el filtro complementario
+  float alpha_f = alpha_g_comp*R + alpha_a_comp*(1-R); // estimacion del filtro complementario
+  alpha_g_comp = alpha_f + (g.gyro.x - wx_prom) * T*1E-6;
 
-  // mueve al servo en una secuencia periodica de angulos
-  const float secuencia_angulos[] = {15.0, 0.0, -15.0, 0.0};
-  const unsigned long periodo_us = 2E6;
+  return alpha_f;
+}
+
+float senial_control(Servo &obj_servo){
+  // mueve al servo en una secuencia periodica de angulos, devuelve el angulo
+  const float secuencia_angulos[] = {10.0, 0.0, -10.0, 0.0};
+  const unsigned long periodo_us = 3E6;
 
   static unsigned long ult_mov_us = 0;
   static int pos_actual = 0;
+  static float angulo_actual = secuencia_angulos[pos_actual];
   unsigned long ahora = micros();
+
   
   if(ahora - ult_mov_us >= periodo_us){
-    float us = angulo_a_us(secuencia_angulos[pos_actual]);
-    obj_servo.writeMicroseconds(us);
     pos_actual = (pos_actual+1) % 4;
+    angulo_actual = secuencia_angulos[pos_actual];
+    float us = angulo_a_us(angulo_actual);
+    obj_servo.writeMicroseconds(us);
     ult_mov_us = ahora;
-  };
+  }
+
+  return angulo_actual;
 
 }
 
@@ -130,6 +138,6 @@ void matlab_send(float datos[], int n) {
 }
 
 int angulo_a_us(float angulo) {
-  return 1350 + (angulo * 350.0 / 12.5); // cero grados son 1350us, 350us mueve 12.5 grados (medido experimentalmente)
+  return 1350 + (-angulo * 350.0 / 12.5); // cero grados son 1350us, 350us mueve 12.5 grados (medido experimentalmente)
 }
 
