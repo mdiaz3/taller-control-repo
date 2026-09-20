@@ -1,19 +1,44 @@
+>> P_c
+
+P_c =
+ 
+    -1.045 s + 100.3
+  ---------------------
+  s^2 + 11.68 s + 98.63
+ 
+Continuous-time transfer function.
+
+>> polos_c
+
+polos_c =
+
+  -5.8396 + 8.0332i
+  -5.8396 - 8.0332i
+
+>> P_d
+
 P_d =
  
-         0.02826
-  ---------------------
-  z^2 - 1.79 z + 0.8223
+         0.03565
+  ----------------------
+  z^2 - 1.757 z + 0.7917
  
 Sample time: 0.02 seconds
 Discrete-time transfer function.
 
+>> polos_d
 
+polos_d =
 
+   0.8783 + 0.1423i
+   0.8783 - 0.1423i
 
-P_c =
- 
-   -0.8081 s + 78.02
-  --------------------
-  s^2 + 9.78 s + 90.37
- 
-Continuous-time transfer function.
+>> alpha
+
+alpha =
+
+  3×1 single column vector
+
+    1.7566
+   -0.7917
+    0.0356

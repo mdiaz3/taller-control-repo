@@ -138,6 +138,6 @@ void matlab_send(float datos[], int n) {
 }
 
 int angulo_a_us(float angulo) {
-  return 1350 + (-angulo * 350.0 / 12.5); // cero grados son 1350us, 350us mueve 12.5 grados (medido experimentalmente)
+  return 1350 + (-angulo * 350.0 / 10.7); // cero grados son 1350us, 350us mueve 10.5 grados (medido experimentalmente)
 }
 
