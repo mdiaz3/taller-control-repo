@@ -19,6 +19,12 @@ float wx_prom = 0; // velocidad angular promedio en x
 
 Adafruit_MPU6050 mpu;
 
+// Control PI
+const float Kp = 0.6;
+const float Ki = 6;
+
+float error_anterior = 0;
+float u_anterior = 0;
 
 void setup(void) {
   Serial.begin(115200);
@@ -65,18 +71,28 @@ void setup(void) {
 void loop() {
   
   tiempo1 = micros();
-
-  float u = senial_control(obj_servo);
-
+  
   // obtener mediciones
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); 
   
-  float alpha_f = estimar_angulo(a, g);
+  float alpha_f = estimar_angulo_rad(a, g) * 180.0 / 3.1415;
 
-  // enviar a matlab > {senial de control, angulo edstimado}
-  float datos[2] = {u, alpha_f*180.0/3.1415};
-  matlab_send(datos, 2);
+  // referencia de angulo de la barra
+  float referencia = 5;
+
+  // control PI
+  float u = control_PI(referencia, alpha_f);
+
+  // perturbacion
+  float v = angulo_perturbacion();
+
+  // mover el servo incluyendo la perturbacion
+  obj_servo.writeMicroseconds(angulo_a_us(u+v));
+
+  // enviar a matlab > {senial de control, angulo estimado}
+  float datos[3] = {u, alpha_f, v};
+  matlab_send(datos, 3);
 
   // controlar la frecuencia de muestreo
   tiempo2 = micros();
@@ -90,10 +106,12 @@ void loop() {
     delayMicroseconds(t_delay);
   }
 
+
 }
 
-float estimar_angulo(sensors_event_t a, sensors_event_t g){
+float estimar_angulo_rad(sensors_event_t a, sensors_event_t g){
   // filtro complementario
+
   const float R = 0.93;
   static float alpha_g_inicial = 0;
   static float alpha_g_comp = alpha_g_inicial + (g.gyro.x - wx_prom) * T*1E-6; // estimacion del angulo basada en el giroscopio para el filtro complementario
@@ -105,27 +123,18 @@ float estimar_angulo(sensors_event_t a, sensors_event_t g){
   return alpha_f;
 }
 
-float senial_control(Servo &obj_servo){
-  // mueve al servo en una secuencia periodica de angulos, devuelve el angulo
-  const float secuencia_angulos[] = {10.0, 0.0, -10.0, 0.0};
-  const unsigned long periodo_us = 3E6;
+float control_PI(float referencia, float angulo){
 
-  static unsigned long ult_mov_us = 0;
-  static int pos_actual = 0;
-  static float angulo_actual = secuencia_angulos[pos_actual];
-  unsigned long ahora = micros();
+  float error = referencia - angulo;
 
-  
-  if(ahora - ult_mov_us >= periodo_us){
-    pos_actual = (pos_actual+1) % 4;
-    angulo_actual = secuencia_angulos[pos_actual];
-    float us = angulo_a_us(angulo_actual);
-    obj_servo.writeMicroseconds(us);
-    ult_mov_us = ahora;
-  }
+  float u = u_anterior
+            + Kp * (error - error_anterior)
+            + (Ki * T * 1E-6 / 2.0) * (error + error_anterior);
 
-  return angulo_actual;
+  error_anterior = error;
+  u_anterior = u;
 
+  return u;
 }
 
 void matlab_send(float datos[], int n) {
@@ -142,28 +151,22 @@ int angulo_a_us(float angulo) {
 }
 
 
-int loopCounter = 0;
+float angulo_perturbacion(void){
+  // mueve al servo en una secuencia periodica de angulos, devuelve el angulo
+  const float secuencia_angulos[] = {10.0, 0.0, 0.0, 0.0, -10.0, 0.0, 0.0, 0.0};
+  const unsigned long periodo_us = 4E6;
 
-float senial_control_2(Servo &obj_servo) {
+  static unsigned long ult_mov_us = 0;
+  static int pos_actual = 0;
+  static float angulo_actual = secuencia_angulos[pos_actual];
+  unsigned long ahora = micros();
 
-  static float angulo_actual = 0.0;
-
-  if (loopCounter == 150) {
-
-    loopCounter = 0;
-
-    if (angulo_actual == 10.0) {
-      angulo_actual = 0.0;
-    }
-    else {
-      angulo_actual = 10.0;
-    }
-
-    float us = angulo_a_us(angulo_actual);
-    obj_servo.writeMicroseconds(us);
+  if(ahora - ult_mov_us >= periodo_us){
+    pos_actual = (pos_actual+1) % 8;
+    angulo_actual = secuencia_angulos[pos_actual];
+    ult_mov_us = ahora;
   }
 
-  loopCounter++;
-
   return angulo_actual;
+
 }

@@ -1,13 +1,13 @@
 %%
-u = out.u; % senial de control
-y = out.alpha_f; % angulo estimado
+u = out.u(51:end); % senial de control
+y = out.alpha_f(51:end); % angulo estimado
 N = length(y); % cant de muestras
 Ts = 0.02; % periodo de muestreo
 
 % y ~ X * alpha
 % alpha es el vector de coef en y[k]=c1​y[k−1]+c2​y[k−2]+c3​u[k−2]​ 
 
-X = [y(2:N-1), y(1:N-2), u(1:N-2)];r
+X = [y(2:N-1), y(1:N-2), u(1:N-2)];
 y_identificacion = y(3:N);
 alpha = pinv(X)*y_identificacion;
 
@@ -27,7 +27,7 @@ polos_c = pole(P_c); % polos continuos
 
 %% Resultados
 s = tf('s');
-P_c = (-0.8081*s + 78.02)/(s^2 + 9.78*s + 90.37);
+P_c = -1.6098*(s-95.29)/(s^2 + 13.22s + 151.6);
 
 %% Graficar resultados
 t = (0:N-1)' * Ts;
