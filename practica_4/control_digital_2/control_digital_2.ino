@@ -79,7 +79,7 @@ void loop() {
   float alpha_f = estimar_angulo_rad(a, g) * 180.0 / 3.1415;
 
   // referencia de angulo de la barra
-  float referencia = 5;
+  float referencia = 0;
 
   // control PI
   float u = control_PI(referencia, alpha_f);
