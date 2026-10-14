@@ -1,7 +1,3 @@
-// calibracion del giroscopio, lectura de la imu, 
-// estimacion de angulos, filtro complementario,
-// envio de datos a simulink, movimiento de la barra con el servo
-
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
 #include <Servo.h>
