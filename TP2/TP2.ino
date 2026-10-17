@@ -82,8 +82,8 @@ void loop() {
   float error = referencia - dist_carro;
 
   // accion de control
-  float u = control_PID(error, 0.5*K0, 0.4*K0/T0, 0, T*1E-6);
-  mover_servo(1350.0 + u, obj_servo);
+  //float u = control_PID(error, 0.5*K0, 0.4*K0/T0, 0, T*1E-6);
+  //mover_servo(1350.0 + u, obj_servo);
 
 
   float datos[3] = {(dist_carro-15)/100, alpha,0.0}; //se envia la posicion en cm

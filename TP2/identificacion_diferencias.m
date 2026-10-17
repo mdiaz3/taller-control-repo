@@ -1,13 +1,11 @@
-%%
 inicio=3.3;
 fin=4.6;
 Ts = 0.02; % periodo de muestreo
 
-pos1 = out.distancia(1:end); % posicion del carro
-tita1 = out.tita(1:end); % angulo de la barra
-
-pos = [pos1];
-tita = [tita1];
+%pos = out.distancia(1:end); % posicion del carro
+%tita = out.tita(1:end); % angulo de la barra
+pos = datos(:,1);
+tita = datos(:,2);
 
 N = length(tita); % cant de muestras
 
@@ -33,8 +31,9 @@ P_d = c2d(P_c,Ts);
 polos_d = pole(P_d); % polos discretos
 
 % Resultados
-P_c
-datos_oscilacion=[tita,pos];
+P_c;
+
+
 %% Grafico de los datos usados en la identificacion
 t0 = 4;                                    % inicio del tramo [s]
 t  = (0:N-1)' * Ts;
