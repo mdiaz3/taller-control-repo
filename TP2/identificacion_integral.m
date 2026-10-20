@@ -28,16 +28,16 @@ x0 = [alpha(1); alpha(2) - a*alpha(1)];
 sys = ss([0 1; 0 -a], [0; g], [1 0], 0);
 pos_sim = lsim(sys, tita - tita0, t, x0);
 
-fit = 100*(1 - norm(pos - pos_sim)/norm(pos - mean(pos)));  % 100 = ajuste perfecto
+%fit = 100*(1 - norm(pos - pos_sim)/norm(pos - mean(pos)));  % 100 = ajuste perfecto
 plot(t, pos, t, pos_sim);
 legend('medido','modelo'); xlabel('Tiempo [s]'); ylabel('Posicion [m]'); grid on;
-title(sprintf('Ajuste: %.1f %%', fit));
+%title(sprintf('Ajuste: %.1f %%', fit));
 
 P_c
 
 
 %% Cargar las corridas y calcular aceleracion vs angulo medio
-archivos = {'experimento1','experimento2','experimento3','experimento4','experimento5','experimento6','experimento7','experimento8','experimento8'};  % ajustar
+archivos = {'experimento1','experimento2','experimento3','experimento4','experimento5','experimento6','experimento7','experimento8','experimento9'};  % ajustar
 Ts = 0.02;   L = 40;                         % ventana de ~0.8 s
 nrun = numel(archivos);
 A = zeros(nrun,1);  thm = zeros(nrun,1);  ths = zeros(nrun,1);
@@ -96,16 +96,8 @@ a = median(a_run)
 
 %% Validacion de una corrida: modelo fijo vs datos
 Ts = 0.02;   L = 40;
-archivos = {'experimento1','experimento2','experimento3','experimento4','experimento5','experimento6','experimento7','experimento8','experimento8'};  % ajustar
+archivos = {'experimento1','experimento2','experimento3','experimento4','experimento5','experimento6','experimento7','experimento8','experimento9'};  % ajustar
 
-% g y tita0 de la recta (si q esta en el workspace los usa; si no, valores a mano)
-if exist('q','var')
-    g = q(1);   tita0 = -q(2)/q(1);
-else
-    g = -6.75;  tita0 = -0.008;
-end
-
-a = 0.6552;
 j = 9;        
 
 S = load(archivos{j});   p = S.pos(:);   th = S.tita(:);
@@ -122,10 +114,9 @@ x0 = [c(3); c(2)];                           % posicion y velocidad inicial
 sys = ss([0 1; 0 -a], [0; g], [1 0], 0);     % P_c = g/(s(s+a)) con estados [pos; vel]
 p_sim = lsim(sys, th - tita0, t, x0);
 
-ajuste = 100*(1 - norm(p - p_sim)/norm(p - mean(p)));
 figure; plot(t, p, t, p_sim); grid on;
 legend('medido', 'modelo'); xlabel('Tiempo [s]'); ylabel('Posicion [m]');
-title(sprintf('Corrida %d, a = %.2f: ajuste %.1f %%', j, a, ajuste));
+title(sprintf('Experimento %d  | \\theta = %.2f °', j,mean(th)*180/pi));
 
 %% Validacion con rozamiento Coulomb + viscoso (modelo no lineal), una corrida
 Ts = 0.02;   L = 40;
