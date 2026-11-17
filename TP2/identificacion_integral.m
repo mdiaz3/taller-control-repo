@@ -11,8 +11,8 @@ I2 = cumtrapz(t, cumtrapz(t, tita));
 X  = [ones(N,1), t, t.^2, I2, -I1];
 alpha = X \ pos;
 
-g = alpha(4);  a = alpha(5);            % a = k/m
-
+%g = alpha(4);  a = alpha(5);            % a = k/m
+g = -7;  a = 2;
 % funcion de transferencia continua
 s = tf('s');
 P_c = zpk(g/(s*(s+a)));

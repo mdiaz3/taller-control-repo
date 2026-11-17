@@ -1,7 +1,7 @@
 %% Identificacion planta del servo
 %u = out.u(30/0.02:end); % senial de control
 %y = out.alpha_f(30/0.02:end); % angulo estimado
-
+close all;
 u = datos(:,1);
 y = datos(:,2);
 
@@ -34,7 +34,7 @@ P_c = 127.5/(s^2 + 10.02*s + 128.6)
 pole(P_c);
 
 % Con retardo
-R = (2/Ts - s)/(2/Ts + s);
+R = (1/Ts - s)/(1/Ts + s);
 P_c_ret = minreal(P_c*R);
 
 
@@ -43,8 +43,8 @@ t = (0:N-1)' * Ts;
 y_modelo = lsim(P_c, u, t);
 y_modelo_ret = lsim(P_c_ret, u, t);
 
-figure(); plot(t, y, '.', t, y_modelo, '-');
-legend('Datos', 'Modelo identificado');
+figure(); plot(t, y, '.', t, y_modelo, '-',t, y_modelo_ret, '-');
+legend('Datos', 'Modelo identificado', 'Modelo identificado (con retardo)');
 xlabel('Tiempo [s]');
-ylabel('\tita_f');
+ylabel('\theta_f');
 grid on;
