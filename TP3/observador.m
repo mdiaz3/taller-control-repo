@@ -27,7 +27,7 @@ rank(obsv(A,C(1,:))); % 4x4 > rango 4 > es observable
 rank(obsv(A,C(2,:))); % 4x4 > rango 2 > no es observable 
 
 % Polos del observador
-p_obs_c = [-7 -8 -10 -11];          % ajustar manual
+p_obs_c = [-7 -8 -9 -10];          % ajustar manual
 p_d = exp(p_obs_c*Ts);
 
 L_d = place(A_d', C_d', p_d)';

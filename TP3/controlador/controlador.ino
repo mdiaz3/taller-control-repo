@@ -37,14 +37,14 @@ const float b2 = -5.16783e-05;
 const float b3 = 0.0237778;
 const float b4 = 2.29099;
 
-const float l11 = 0.327081, l12 = -0.0217185;
-const float l21 = 0.782746, l22 = -0.118636;
-const float l31 = -0.0041642, l32 = 0.168127;
-const float l41 = 0.00123646, l42 = -2.32374; 
+const float l11 = 0.231917, l12 = -0.00316062;
+const float l21 = 0.351402, l22 = -0.0202643;
+const float l31 = -0.000687908, l32 = 0.101075;
+const float l41 = 0.00122019, l42 = -2.23952;
 
 // matriz de ganancias
-const float k1 = -7.8321, k2 = -1.9957, k3 = -0.5696, k4 = 0.0199;
-
+//const float k1 = -100, k2 = -15, k3 = 0.7, k4 = 0.2; //mejores ganancias hasta ahora
+const float k1 = -100, k2 = -12, k3 = 0.8, k4 = 0.25; //andna piola tambien
 // inicializar el estado estimado: pos [m], dpos [m/s], tita [rad], dtita [rad/s]
 float x1_hat = 0, x2_hat = 0, x3_hat = 0, x4_hat = 0;
 
@@ -77,23 +77,36 @@ void setup(void) {
 
   // inicializar servo
   obj_servo.attach(pinServo);
+  obj_servo.writeMicroseconds(angulo_a_us(0));
+  delay(1500);
+  float suma = 0;
+  for (int i = 0; i < 500; i++) {
+    sensors_event_t a, g, t;
+    mpu.getEvent(&a, &g, &t);
+    suma += g.gyro.x;
+    delay(5);
+  }
+  wx_prom = suma / 500.0;   // rad/s, la misma unidad que usa estimar_angulo_rad
+  Serial.print(wx_prom);
 
 }
 
 void loop() {
   
-  tiempo1 = micros();    
+  tiempo1 = micros();   
+  float p_ref = 0; 
   
   // obtener mediciones
   actualizar_posicion();
   float dpos = calcular_velocidad();
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); 
-  float tita = estimar_angulo_rad(a, g) * 180.0 / PI;
-  float dtita = g.gyro.x;
+  float dtita = g.gyro.x-wx_prom;
+  float tita = estimar_angulo_rad(a, g, dtita) * 180.0 / PI;
+  
   
   // controlador
-  float u_grados = controlador();
+  float u_grados = controlador_con_ref(p_ref);
   obj_servo.writeMicroseconds(angulo_a_us(u_grados));
 
   actualizar_observador(u_grados, pos_actual, tita);
@@ -126,6 +139,14 @@ float controlador(){
 }
 
 
+float controlador_con_ref(float p_ref){
+
+  float accion_control = -(k1*(x1_hat-p_ref) + k2*x2_hat + k3*x3_hat + k4*x4_hat); // en grados
+  float u = constrain(accion_control,U_MIN,U_MAX);
+
+  return u;
+}
+
 float actualizar_posicion() {
   //Función para obtener la posicion del carrito (m) usando el sensor de distancia
   unsigned int tiempo_echo = sensor.ping();
@@ -154,16 +175,16 @@ void actualizar_observador(float u, float y1, float y2) {
   x1_hat = x1_new; x2_hat = x2_new; x3_hat = x3_new; x4_hat = x4_new;
 }
 
-float estimar_angulo_rad(sensors_event_t a, sensors_event_t g){
+float estimar_angulo_rad(sensors_event_t a, sensors_event_t g, float dtita){
   // filtro complementario
 
   const float R = 0.93;
   static float alpha_g_inicial = 0;
-  static float alpha_g_comp = alpha_g_inicial + (g.gyro.x - wx_prom) * T*1E-6; // estimacion del angulo basada en el giroscopio para el filtro complementario
+  static float alpha_g_comp = alpha_g_inicial + dtita * T*1E-6; // estimacion del angulo basada en el giroscopio para el filtro complementario
   
   float alpha_a_comp = atan2(a.acceleration.y, a.acceleration.z); // estimacion del angulo basada en el acelerometro para el filtro complementario
   float alpha_f = alpha_g_comp*R + alpha_a_comp*(1-R); // estimacion del filtro complementario
-  alpha_g_comp = alpha_f + (g.gyro.x - wx_prom) * T*1E-6;
+  alpha_g_comp = alpha_f + dtita * T*1E-6;
 
   return alpha_f;
 }
